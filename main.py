@@ -1,23 +1,56 @@
-import objc
+""" This is a simple Python script that creates a status bar menu with a slider and a toggle button.
+    The slider allows you to adjust the time interval between the popups, and the toggle button
+    enables/disables the popup.
+"""
+
+# pylint: disable=invalid-name, no-name-in-module, unused-argument, too-many-instance-attributes
+# pylint: disable=broad-exception-caught
+import random
 from Cocoa import (
-    NSApplication, NSApp, NSWindow, NSWindowStyleMask,
-    NSRunningApplication, NSApplicationActivationPolicyRegular,
-    NSTimer, NSImage, NSStatusBar, NSMenu, NSMenuItem, NSSlider,
-    NSTextField, NSScreen, NSFont, NSWindowStyleMaskTitled,
-    NSWindowStyleMaskClosable, NSTextAlignmentCenter, NSView
+    NSApplication,
+    NSWindow,
+    NSRunningApplication,
+    NSApplicationActivationPolicyRegular,
+    NSTimer,
+    NSImage,
+    NSStatusBar,
+    NSMenu,
+    NSMenuItem,
+    NSSlider,
+    NSTextField,
+    NSScreen,
+    NSFont,
+    NSWindowStyleMaskTitled,
+    NSWindowStyleMaskClosable,
+    NSTextAlignmentCenter,
+    NSView,
 )
 from Foundation import NSObject, NSMakeRect
-import random
-import sys
+
 
 class AppDelegate(NSObject):
+    """This is main class that creates the menu bar and handles the timer and popup window."""
+
+    def __init__(self):
+        self.timer_interval = None
+        self.active_status = None
+        self.window = None
+        self.status_bar = None
+        self.status_item = None
+        self.menu = None
+        self.toggle_popup_item = None
+        self.slider_value_label = None
+        self.timer = None
+
     def applicationDidFinishLaunching_(self, notification):
+        """This method is called when the application is launched."""
         self.timer_interval = 10
         self.create_menu_bar()
         self.start_timer()
         self.active_status = True
 
     def create_menu_bar(self):
+        """This method creates the menu bar and its items."""
         try:
             self.status_bar = NSStatusBar.systemStatusBar()
             self.status_item = self.status_bar.statusItemWithLength_(-1)
@@ -29,7 +62,9 @@ class AppDelegate(NSObject):
             # Add space from the top of the menu
             self.menu.addItem_(NSMenuItem.separatorItem())
             # Slider for adjusting the timer interval
-            slider_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Timer Interval", None, "")
+            slider_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                "Timer Interval", None, ""
+            )
 
             # Container for slider and label
             container_view = NSView.alloc().initWithFrame_(NSMakeRect(0, 10, 250, 30))
@@ -43,7 +78,9 @@ class AppDelegate(NSObject):
             slider.setAction_("updateTimerInterval:")
 
             # Label to display the current value of the slider
-            self.slider_value_label = NSTextField.alloc().initWithFrame_(NSMakeRect(210, -10, 40, 30))
+            self.slider_value_label = NSTextField.alloc().initWithFrame_(
+                NSMakeRect(210, -10, 40, 30)
+            )
             self.slider_value_label.setStringValue_(str(int(self.timer_interval)))
             self.slider_value_label.setEditable_(False)
             self.slider_value_label.setBezeled_(False)
@@ -59,13 +96,17 @@ class AppDelegate(NSObject):
             self.menu.addItem_(slider_item)
 
             # Toggle item to enable/disable the popup
-            self.toggle_popup_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Disable Popup", "togglePopup:", "")
+            self.toggle_popup_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                "Disable Popup", "togglePopup:", ""
+            )
             self.toggle_popup_item.setTarget_(self)
             self.toggle_popup_item.setAction_("togglePopupStatus:")
             self.menu.addItem_(self.toggle_popup_item)
 
             # Quit item
-            quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
+            quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                "Quit", "terminate:", ""
+            )
             self.menu.addItem_(quit_item)
 
             # Set the menu
@@ -74,11 +115,15 @@ class AppDelegate(NSObject):
             print(error)
 
     def updateTimerInterval_(self, sender):
+        """This method is called when the slider is adjusted."""
         self.timer_interval = sender.floatValue()
-        self.slider_value_label.setStringValue_(str(int(self.timer_interval)))  # Update the label with the new value
+        self.slider_value_label.setStringValue_(
+            str(int(self.timer_interval))
+        )  # Update the label with the new value
         self.start_timer()
 
     def togglePopupStatus_(self, sender):
+        """This method is called when the toggle button is clicked."""
         self.active_status = not self.active_status
         if self.active_status:
             self.toggle_popup_item.setTitle_("Disable Popup")
@@ -86,7 +131,8 @@ class AppDelegate(NSObject):
             self.toggle_popup_item.setTitle_("Enable Popup")
 
     def start_timer(self):
-        if hasattr(self, 'timer'):
+        """This method starts the timer."""
+        if hasattr(self, "timer"):
             self.timer.invalidate()
 
         self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
@@ -94,6 +140,7 @@ class AppDelegate(NSObject):
         )
 
     def showPopup_(self, timer):
+        """This method shows the popup window."""
         try:
             if self.active_status:
                 screen_width = NSScreen.mainScreen().frame().size.width
@@ -106,14 +153,13 @@ class AppDelegate(NSObject):
                 window_style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 
                 self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-                    NSMakeRect(x, y, window_width, window_height),
-                    window_style,
-                    2,
-                    False
+                    NSMakeRect(x, y, window_width, window_height), window_style, 2, False
                 )
                 self.window.setTitle_("")
                 self.window.setLevel_(3)  # Always on top
-                self.window.setContentView_(NSApplication.sharedApplication().delegate().create_label())
+                self.window.setContentView_(
+                    NSApplication.sharedApplication().delegate().create_label()
+                )
                 self.window.makeKeyAndOrderFront_(None)
 
                 # Schedule the window to close after 5 seconds
@@ -126,6 +172,7 @@ class AppDelegate(NSObject):
             print(error)
 
     def create_label(self):
+        """This method creates the label for the popup window."""
         label = NSTextField.alloc().initWithFrame_(NSMakeRect(10, 10, 280, 80))
         label.setStringValue_("Check your posture!")
         label.setEditable_(False)
@@ -136,9 +183,11 @@ class AppDelegate(NSObject):
         return label
 
     def closePopup_(self, timer):
+        """This method closes the popup window."""
         self.window.orderOut_(None)
         self.window = None
         print("Popup window closed")
+
 
 if __name__ == "__main__":
     app = NSApplication.sharedApplication()

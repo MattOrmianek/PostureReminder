@@ -4,8 +4,10 @@
 """
 
 # pylint: disable=invalid-name, no-name-in-module, unused-argument, too-many-instance-attributes
-# pylint: disable=broad-exception-caught
+# pylint: disable=broad-exception-caught, inconsistent-return-statements
 import random
+import logging
+from logging.handlers import RotatingFileHandler
 from Cocoa import (
     NSApplication,
     NSWindow,
@@ -26,6 +28,20 @@ from Cocoa import (
     NSView,
 )
 from Foundation import NSObject, NSMakeRect
+
+handler = RotatingFileHandler("backend.log", maxBytes=50 * 1024 * 1024, backupCount=50)  # 50 MB
+handler.setFormatter(
+    logging.Formatter(
+        "%(asctime)s - %(filename)s:%(lineno)d - %(funcName)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+)
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+logger = logging.getLogger(__name__)
 
 
 class AppDelegate(NSObject):
@@ -112,32 +128,41 @@ class AppDelegate(NSObject):
             # Set the menu
             self.status_item.setMenu_(self.menu)
         except Exception as error:
-            print(error)
+            logging.error("Error creating menu bar: %s", error)
 
     def updateTimerInterval_(self, sender):
         """This method is called when the slider is adjusted."""
-        self.timer_interval = sender.floatValue()
-        self.slider_value_label.setStringValue_(
-            str(int(self.timer_interval))
-        )  # Update the label with the new value
-        self.start_timer()
+        try:
+            self.timer_interval = sender.floatValue()
+            self.slider_value_label.setStringValue_(
+                str(int(self.timer_interval))
+            )  # Update the label with the new value
+            self.start_timer()
+        except Exception as error:
+            logging.error("Error updating timer interval: %s", error)
 
     def togglePopupStatus_(self, sender):
         """This method is called when the toggle button is clicked."""
-        self.active_status = not self.active_status
-        if self.active_status:
-            self.toggle_popup_item.setTitle_("Disable Popup")
-        else:
-            self.toggle_popup_item.setTitle_("Enable Popup")
+        try:
+            self.active_status = not self.active_status
+            if self.active_status:
+                self.toggle_popup_item.setTitle_("Disable Popup")
+            else:
+                self.toggle_popup_item.setTitle_("Enable Popup")
+        except Exception as error:
+            logging.error("Error toggling popup status: %s", error)
 
     def start_timer(self):
         """This method starts the timer."""
-        if hasattr(self, "timer"):
-            self.timer.invalidate()
+        try:
+            if hasattr(self, "timer"):
+                self.timer.invalidate()
 
-        self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-            self.timer_interval, self, "showPopup:", None, True
-        )
+            self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+                self.timer_interval, self, "showPopup:", None, True
+            )
+        except Exception as error:
+            logging.error("Error starting timer: %s", error)
 
     def showPopup_(self, timer):
         """This method shows the popup window."""
@@ -169,24 +194,30 @@ class AppDelegate(NSObject):
 
                 print("Popup window created at position:", x, y)
         except Exception as error:
-            print(error)
+            logging.error("Error showing popup: %s", error)
 
     def create_label(self):
         """This method creates the label for the popup window."""
-        label = NSTextField.alloc().initWithFrame_(NSMakeRect(10, 10, 280, 80))
-        label.setStringValue_("Check your posture!")
-        label.setEditable_(False)
-        label.setBezeled_(False)
-        label.setDrawsBackground_(False)
-        label.setFont_(NSFont.systemFontOfSize_(40))
-        label.setAlignment_(NSTextAlignmentCenter)  # Center the text horizontall
-        return label
+        try:
+            label = NSTextField.alloc().initWithFrame_(NSMakeRect(10, 10, 280, 80))
+            label.setStringValue_("Check your posture!")
+            label.setEditable_(False)
+            label.setBezeled_(False)
+            label.setDrawsBackground_(False)
+            label.setFont_(NSFont.systemFontOfSize_(40))
+            label.setAlignment_(NSTextAlignmentCenter)  # Center the text horizontall
+            return label
+        except Exception as error:
+            logging.error("Error creating label: %s", error)
 
     def closePopup_(self, timer):
         """This method closes the popup window."""
-        self.window.orderOut_(None)
-        self.window = None
-        print("Popup window closed")
+        try:
+            self.window.orderOut_(None)
+            self.window = None
+            print("Popup window closed")
+        except Exception as error:
+            logging.error("Error closing popup: %s", error)
 
 
 if __name__ == "__main__":

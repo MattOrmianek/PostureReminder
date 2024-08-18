@@ -4,7 +4,7 @@ from Cocoa import (
     NSRunningApplication, NSApplicationActivationPolicyRegular,
     NSTimer, NSImage, NSStatusBar, NSMenu, NSMenuItem, NSSlider,
     NSTextField, NSScreen, NSFont, NSWindowStyleMaskTitled,
-    NSWindowStyleMaskClosable, NSTextAlignmentCenter
+    NSWindowStyleMaskClosable, NSTextAlignmentCenter, NSView
 )
 from Foundation import NSObject, NSMakeRect
 import random
@@ -26,15 +26,36 @@ class AppDelegate(NSObject):
             self.status_item.button().setImage_(icon)
             self.menu = NSMenu.alloc().init()
 
+            # Add space from the top of the menu
+            self.menu.addItem_(NSMenuItem.separatorItem())
             # Slider for adjusting the timer interval
             slider_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Timer Interval", None, "")
-            slider = NSSlider.alloc().initWithFrame_(NSMakeRect(0, 0, 200, 20))
-            slider.setMinValue_(1)
+
+            # Container for slider and label
+            container_view = NSView.alloc().initWithFrame_(NSMakeRect(0, 10, 250, 30))
+
+            # Slider
+            slider = NSSlider.alloc().initWithFrame_(NSMakeRect(10, -10, 200, 30))
+            slider.setMinValue_(5)
             slider.setMaxValue_(300)
             slider.setFloatValue_(self.timer_interval)
             slider.setTarget_(self)
             slider.setAction_("updateTimerInterval:")
-            slider_item.setView_(slider)
+
+            # Label to display the current value of the slider
+            self.slider_value_label = NSTextField.alloc().initWithFrame_(NSMakeRect(210, -10, 40, 30))
+            self.slider_value_label.setStringValue_(str(int(self.timer_interval)))
+            self.slider_value_label.setEditable_(False)
+            self.slider_value_label.setBezeled_(False)
+            self.slider_value_label.setDrawsBackground_(False)
+            self.slider_value_label.setAlignment_(NSTextAlignmentCenter)
+
+            # Add slider and label to the container view
+            container_view.addSubview_(slider)
+            container_view.addSubview_(self.slider_value_label)
+
+            # Set the container view to the menu item
+            slider_item.setView_(container_view)
             self.menu.addItem_(slider_item)
 
             # Toggle item to enable/disable the popup
@@ -52,17 +73,17 @@ class AppDelegate(NSObject):
         except Exception as error:
             print(error)
 
+    def updateTimerInterval_(self, sender):
+        self.timer_interval = sender.floatValue()
+        self.slider_value_label.setStringValue_(str(int(self.timer_interval)))  # Update the label with the new value
+        self.start_timer()
+
     def togglePopupStatus_(self, sender):
         self.active_status = not self.active_status
         if self.active_status:
             self.toggle_popup_item.setTitle_("Disable Popup")
         else:
             self.toggle_popup_item.setTitle_("Enable Popup")
-
-
-    def updateTimerInterval_(self, sender):
-        self.timer_interval = sender.floatValue()
-        self.start_timer()
 
     def start_timer(self):
         if hasattr(self, 'timer'):
@@ -97,7 +118,7 @@ class AppDelegate(NSObject):
 
                 # Schedule the window to close after 5 seconds
                 NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                    5.0, self, "closePopup:", None, False
+                    1.5, self, "closePopup:", None, False
                 )
 
                 print("Popup window created at position:", x, y)

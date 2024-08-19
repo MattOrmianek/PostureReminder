@@ -54,6 +54,7 @@ class AppDelegate(NSObject):
         self.toggle_popup_item = None
         self.slider_value_label = None
         self.timer = None
+        self.mode = None
 
     def applicationDidFinishLaunching_(self, notification):
         """This method is called when the application is launched."""
@@ -62,6 +63,7 @@ class AppDelegate(NSObject):
         self.create_menu_bar()
         self.start_timer()
         self.active_status = True
+        self.mode = "random"
 
     def create_menu_bar(self):
         """This method creates the menu bar and its items."""
@@ -109,6 +111,24 @@ class AppDelegate(NSObject):
             slider_item.setView_(container_view)
             self.menu.addItem_(slider_item)
 
+            # Add Mode dropdown list
+            mode_menu_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                "Mode", None, ""
+            )
+            mode_menu = NSMenu.alloc().init()
+
+            # Mode options
+            modes = ["Custom", "Random", "Center"]
+            for mode in modes:
+                mode_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(mode, None, "")
+                mode_item.setTarget_(self)
+                mode_item.setAction_("selectMode:")
+                mode_item.setRepresentedObject_(mode)
+                mode_menu.addItem_(mode_item)
+
+            mode_menu_item.setSubmenu_(mode_menu)
+            self.menu.addItem_(mode_menu_item)
+
             # Toggle item to enable/disable the popup
             self.toggle_popup_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
                 "Disable Popup", "togglePopup:", ""
@@ -127,6 +147,12 @@ class AppDelegate(NSObject):
             self.status_item.setMenu_(self.menu)
         except Exception as error:
             logging.error("Error creating menu bar: %s", error)
+
+    def selectMode_(self, sender):
+        """Method to handle mode selection."""
+        selected_mode = sender.representedObject()
+        self.mode = selected_mode
+        logging.info("Mode selected: %s", self.mode)
 
     def updateTimerInterval_(self, sender):
         """This method is called when the slider is adjusted."""
@@ -170,8 +196,19 @@ class AppDelegate(NSObject):
                 screen_height = NSScreen.mainScreen().frame().size.height
 
                 window_width, window_height = 300, 100
-                x = random.randint(0, int(screen_width - window_width))
-                y = random.randint(0, int(screen_height - window_height))
+                if self.mode == "Random":
+                    x = random.randint(0, int(screen_width - window_width))
+                    y = random.randint(0, int(screen_height - window_height))
+                elif self.mode == "Center":
+                    x = int(screen_width / 2 - window_width / 2)
+                    y = int(screen_height / 2 - window_height / 2)
+                elif self.mode == "Custom":
+                    # TODO: add reading from config file what was saved by user, for now center
+                    x = int(screen_width / 2 - window_width / 2)
+                    y = int(screen_height / 2 - window_height / 2)
+                else:
+                    x = random.randint(0, int(screen_width - window_width))
+                    y = random.randint(0, int(screen_height - window_height))
 
                 window_style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 

@@ -7,7 +7,6 @@
 # pylint: disable=broad-exception-caught, inconsistent-return-statements
 import random
 import logging
-from logging.handlers import RotatingFileHandler
 from Cocoa import (
     NSApplication,
     NSWindow,
@@ -29,18 +28,16 @@ from Cocoa import (
 )
 from Foundation import NSObject, NSMakeRect
 
-handler = RotatingFileHandler("backend.log", maxBytes=50 * 1024 * 1024, backupCount=50)  # 50 MB
-handler.setFormatter(
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(
     logging.Formatter(
         "%(asctime)s - %(filename)s:%(lineno)d - %(funcName)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 )
-
-
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-logger.addHandler(handler)
+logger.addHandler(console_handler)
 logger = logging.getLogger(__name__)
 
 
@@ -60,6 +57,7 @@ class AppDelegate(NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
         """This method is called when the application is launched."""
+        logging.info("Application launched")
         self.timer_interval = 10
         self.create_menu_bar()
         self.start_timer()
@@ -192,7 +190,7 @@ class AppDelegate(NSObject):
                     1.5, self, "closePopup:", None, False
                 )
 
-                print("Popup window created at position:", x, y)
+                logging.info("Popup window created at position: %s, %s", x, y)
         except Exception as error:
             logging.error("Error showing popup: %s", error)
 
@@ -215,7 +213,7 @@ class AppDelegate(NSObject):
         try:
             self.window.orderOut_(None)
             self.window = None
-            print("Popup window closed")
+            logging.info("Popup window closed")
         except Exception as error:
             logging.error("Error closing popup: %s", error)
 

@@ -5,12 +5,18 @@
 
 # pylint: disable=invalid-name, no-name-in-module, unused-argument, too-many-instance-attributes
 # pylint: disable=broad-exception-caught, inconsistent-return-statements
+import json
 import random
 import logging
 from Cocoa import (
     NSApplication,
     NSWindow,
     NSRunningApplication,
+    NSEventMaskMouseMoved,
+    NSEventMaskLeftMouseDown,
+    NSEvent,
+    NSMakePoint,
+    NSEventTypeLeftMouseDown,
     NSApplicationActivationPolicyRegular,
     NSTimer,
     NSImage,
@@ -203,24 +209,42 @@ class AppDelegate(NSObject):
                     x = int(screen_width / 2 - window_width / 2)
                     y = int(screen_height / 2 - window_height / 2)
                 elif self.mode == "Custom":
-                    # TODO: add reading from config file what was saved by user, for now center
+                    # Set initial position to the center
                     x = int(screen_width / 2 - window_width / 2)
                     y = int(screen_height / 2 - window_height / 2)
+
+                    # Create window
+                    window_style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+                    self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
+                        NSMakeRect(x, y, window_width, window_height), window_style, 2, False
+                    )
+                    self.window.setTitle_("")
+                    self.window.setLevel_(3)  # Always on top
+                    self.window.setContentView_(
+                        NSApplication.sharedApplication().delegate().create_label()
+                    )
+                    self.window.makeKeyAndOrderFront_(None)
+
+                    # Add event tracking for mouse movement and clicks
+                    NSEvent.addLocalMonitorForEventsMatchingMask_handler_(
+                        NSEventMaskMouseMoved | NSEventMaskLeftMouseDown, self.handleMouseEvent_
+                    )
                 else:
                     x = random.randint(0, int(screen_width - window_width))
                     y = random.randint(0, int(screen_height - window_height))
 
-                window_style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+                if self.mode != "Custom":
+                    window_style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 
-                self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-                    NSMakeRect(x, y, window_width, window_height), window_style, 2, False
-                )
-                self.window.setTitle_("")
-                self.window.setLevel_(3)  # Always on top
-                self.window.setContentView_(
-                    NSApplication.sharedApplication().delegate().create_label()
-                )
-                self.window.makeKeyAndOrderFront_(None)
+                    self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
+                        NSMakeRect(x, y, window_width, window_height), window_style, 2, False
+                    )
+                    self.window.setTitle_("")
+                    self.window.setLevel_(3)  # Always on top
+                    self.window.setContentView_(
+                        NSApplication.sharedApplication().delegate().create_label()
+                    )
+                    self.window.makeKeyAndOrderFront_(None)
 
                 # Schedule the window to close after 5 seconds
                 NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
@@ -230,6 +254,32 @@ class AppDelegate(NSObject):
                 logging.info("Popup window created at position: %s, %s", x, y)
         except Exception as error:
             logging.error("Error showing popup: %s", error)
+
+    def handleMouseEvent_(self, event):
+        """Handle mouse movement and clicks."""
+        try:
+            # Get mouse location relative to the screen
+            mouse_location = NSEvent.mouseLocation()
+
+            # Update the window position to follow the cursor
+            self.window.setFrameOrigin_(NSMakePoint(mouse_location.x, mouse_location.y))
+
+            # Check for left mouse click
+            if event.type() == NSEventTypeLeftMouseDown:
+                # Save the current position to config.json
+                config_data = {
+                    "custom_position_x": mouse_location.x,
+                    "custom_position_y": mouse_location.y,
+                }
+                with open("config.json", "w", encoding="utf-8") as config_file:
+                    json.dump(config_data, config_file)
+
+                logging.info("Custom position saved: %s, %s", mouse_location.x, mouse_location.y)
+
+                # Stop tracking events after saving position
+                NSEvent.removeMonitor_(self.handleMouseEvent_)
+        except Exception as error:
+            logging.error("Error handling mouse event: %s", error)
 
     def create_label(self):
         """This method creates the label for the popup window."""
